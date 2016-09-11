@@ -1,2 +1,6 @@
 packages/
 *.deb
+obj/
+*.o
+.theos/
+QQMusicPad

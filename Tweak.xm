@@ -1,12 +1,33 @@
 #import "QQMusicDumper.h"
-/*%group DebugHooks
+%group Hooks
 %hook SongInfo
-- (id)initWithSongType:(int)arg1 songID:(long long)arg2{
-	id ret=%orig;
-	NSLog(@"[SongInfo initWithSongType:%i songID:%lli ]\n%@",arg1,arg2,ret);
-	return ret;
+- (BOOL)playable:(BOOL)arg1 checkQPlay:(BOOL)arg2 checkCopyright:(BOOL)arg3{
+	NSLog(@"SongInfo----playable:checkQPlay:checkCopyright:");
+	return YES;
+}
+- (BOOL)isCreateRadioEnable{
+	return YES;
+}
+- (BOOL)isAutoSaveEnable{
+	return YES;
+}
+- (BOOL)isDownloadEnable{
+	return YES;
+}
+- (BOOL)isShareEnable{
+	return YES;
+}
+- (BOOL)isPlayEnable{
+	return YES;
+}
+- (BOOL)isAddToEnable{
+	return YES;
+}
+- (BOOL)isAddToLoveEnable{
+	return YES;
 }
 %end
+/*
 %hook LyricManager
 + (id)getYInyiLyricFilePath:(id)arg1{
 	id ret=%orig;
@@ -21,12 +42,11 @@
 	return ret;
 }
 %end
-
+*/
 %end
 
-*/
 %ctor{
-//%init(DebugHooks);
+%init(Hooks);
 [QQMusicDumper Dump];
 
 

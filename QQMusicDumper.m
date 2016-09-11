@@ -62,6 +62,9 @@ static NSString* FixTimeStamp(NSString* Input){
     
 }
 static NSString* Serialize(NSArray* Input){
+    if(Input.count <=0 || Input==nil){
+        return nil;
+    }
     NSMutableString* RetVal=[NSMutableString stringWithFormat:@""];
     for (int i=0;i<Input.count;i++){
         [RetVal appendString:[Input objectAtIndex:i]];
@@ -76,13 +79,20 @@ static NSString* Serialize(NSArray* Input){
     SongInfoManagercls=objc_getClass("SongInfoManager");
     SIManager=[SongInfoManagercls sharedSongInfoManager];
     NSLog(@"Init LM:%@\nSIManager:%@",LM,SIManager);
+    //Should Dump
+    NSMutableDictionary *preferences = [[NSMutableDictionary alloc] initWithContentsOfFile:@"/var/mobile/Library/Preferences/naville.qqlrcexport.plist"];
+    BOOL value = [[preferences objectForKey:@"Dump"] boolValue];
+    if(!value||!preferences){
+        [preferences release];
+        return ;
+    }
+    [preferences release];
+
+    //
     @autoreleasepool{
 
         NSError* error;
         NSFileManager* fm=[NSFileManager defaultManager];
-
-        NSLog(@"ShouldDump");
-        [fm removeItemAtPath:[IO GetPath:@"DUMP"] error:nil];
         [fm removeItemAtPath:[IO GetPath:@"qqmusicHelper.sqlite"] error:nil];
         NSLog(@"Start Dumping");
         [fm copyItemAtPath:[IO GetPath:@"qqmusic.sqlite"] toPath:[IO GetPath:@"qqmusicHelper.sqlite"] error:&error];
@@ -93,22 +103,21 @@ static NSString* Serialize(NSArray* Input){
             NSMutableArray* TranslateLRC=[NSMutableArray array];
             NSMutableArray* ID3LRC=[NSMutableArray array];
             NSMutableArray* TransliterateLRC=[NSMutableArray array];
-             NSDictionary* SongInfoDict=[SongList objectAtIndex:i];
+            NSDictionary* SongInfoDict=[SongList objectAtIndex:i];
              SongInfo* SI=[[NSClassFromString(@"SongInfo") alloc] initWithSongType:[[SongInfoDict objectForKey:@"type"] intValue] songID:[[SongInfoDict objectForKey:@"id"] longLongValue]];
              [self DumpTranslateWithSongInfo:SI withLyricsArray:&TranslateLRC];
              [self DumpID3WithSongInfo:SI withLyricsArray:&ID3LRC];
              [self DumpTransliterateWithSongInfo:SI withLyricsArray:&TransliterateLRC];
-             if(ID3LRC.count>0){
-                [LRCDict setObject:ID3LRC forKey:@"ID3"];
-                [Serialize(ID3LRC) writeToFile:[NSString stringWithFormat:@"%@/Documents/Lyrics/%@-%@-%@ID3.txt",NSHomeDirectory(),[SongInfoDict objectForKey:@"name"],[SongInfoDict objectForKey:@"singer"],[SongInfoDict objectForKey:@"album"]] atomically:YES  encoding:NSUTF8StringEncoding error:nil];
-             }
-             if(TranslateLRC.count>0){
-               [Serialize(TranslateLRC) writeToFile:[NSString stringWithFormat:@"%@/Documents/Lyrics/%@-%@-%@翻译.txt",NSHomeDirectory(),[SongInfoDict objectForKey:@"name"],[SongInfoDict objectForKey:@"singer"],[SongInfoDict objectForKey:@"album"]] atomically:YES  encoding:NSUTF8StringEncoding error:nil];
-             }
-             if(TransliterateLRC.count>0){
-               [Serialize(TransliterateLRC) writeToFile:[NSString stringWithFormat:@"%@/Documents/Lyrics/%@-%@-%@音译.txt",NSHomeDirectory(),[SongInfoDict objectForKey:@"name"],[SongInfoDict objectForKey:@"singer"],[SongInfoDict objectForKey:@"album"]] atomically:YES  encoding:NSUTF8StringEncoding error:nil];
-             }     
-             //NSLog(@"SongInfo:%@\nLyrics:%@",SI,LRCDict);              
+             NSString *Name=[SongInfoDict objectForKey:@"name"];
+             NSString *Singer=[SongInfoDict objectForKey:@"singer"];
+             NSString* Album=[SongInfoDict objectForKey:@"album"];
+             Name=[Name stringByReplacingOccurrencesOfString:@"/" withString:@"_"];
+             Singer=[Singer stringByReplacingOccurrencesOfString:@"/" withString:@"_"];
+             Album=[Album stringByReplacingOccurrencesOfString:@"/" withString:@"_"];
+            [LRCDict setObject:ID3LRC forKey:@"ID3"];
+            [Serialize(ID3LRC) writeToFile:[NSString stringWithFormat:@"%@/Documents/Lyrics/%@-%@-%@ID3.txt",NSHomeDirectory(),Name,Singer,Album] atomically:YES  encoding:NSUTF8StringEncoding error:nil];
+            [Serialize(TranslateLRC) writeToFile:[NSString stringWithFormat:@"%@/Documents/Lyrics/%@-%@-%@翻译.txt",NSHomeDirectory(),Name,Singer,Album] atomically:YES  encoding:NSUTF8StringEncoding error:nil];
+            [Serialize(TransliterateLRC) writeToFile:[NSString stringWithFormat:@"%@/Documents/Lyrics/%@-%@-%@音译.txt",NSHomeDirectory(),Name,Singer,Album] atomically:YES  encoding:NSUTF8StringEncoding error:nil];      
         }
    }    
 }
@@ -131,7 +140,7 @@ static NSString* Serialize(NSArray* Input){
         } 
        // NSLog(@"TranslatePath:%@",TranslatePath);  
         id LyricManager=[LMcls sharedLyricManager];
-        NSLog(@"TranslateLyrics:%@",translatelyrics);
+       // NSLog(@"TranslateLyrics:%@",translatelyrics);
         QQLyricParse* rawlyrics=[LyricManager parseText:translatelyrics];          
         NSArray* lyricist=rawlyrics.mLineLyricList;
         for(int i=0;i<[lyricist count];i++){
@@ -179,7 +188,7 @@ static NSString* Serialize(NSArray* Input){
        // NSLog(@"TranslatePath:%@",TranslatePath); 
         translatelyrics=[LMcls getQrcTextFromXml:translatelyrics]; 
         translatelyrics=FixTimeStamp(translatelyrics);
-        NSLog(@"ID3Lyrics:%@",translatelyrics); 
+        //NSLog(@"ID3Lyrics:%@",translatelyrics); 
 
         id LyricManager=[LMcls sharedLyricManager];
         QQLyricParse* rawlyrics=[LyricManager parseText:translatelyrics];          
