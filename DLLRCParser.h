@@ -2,8 +2,8 @@
 //  DLLRCParser.h
 //  LrcParser
 //
-//  Created by Naville.Zhang,Based On Lee's Original DLLRCParser
-//  Copyright (c) 2015 Naville.Zhang. All rights reserved.
+//  Created by lee on 13-10-14.
+//  Copyright (c) 2013年 Lee. All rights reserved.
 //
 
 #import <Foundation/Foundation.h>
@@ -20,5 +20,5 @@
 -(id)init;
 
 -(NSMutableArray *)parseLRC:(NSString *)lrcStr;
--(NSString*)Combiner:(NSMutableArray*)array1;
+
 @end

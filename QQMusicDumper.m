@@ -5,6 +5,7 @@
 //  Created by Zhang Naville on 15/4/26.
 //
 //
+
 #import "QQLyricParse.h"
 #import "QQLineLyric.h"
 #import "QQMusicDumper.h"
@@ -23,10 +24,11 @@ Class SongInfoManagercls=NULL;
 SongInfoManager* SIManager=nil;
 #define PrefixRegex @"\\[\\d{1,},\\d{1,}\\]"
 #define OtherRegex @"\\(\\d{1,},\\d{1,}\\)"
+
+#define MAXTimeDifference 0.00005//LRC lines which have time difference less than this value will be rewritten in the same line because fuck Tencent
+
 static NSString* FixTimeStamp(NSString* Input){
     @autoreleasepool {
-        /*BFCodec* BFC=[[BFCodec alloc] init];
-         [BFC cipherInit:[NSData dataWithBytes:"\xf9\xa1\x42\xc7\x0b\x07\xd9\xa8\x09\x3b\x56\xb8\xc2\xee\xb6\x98" length:16]];*/
         
         NSMutableString* TestString=[Input mutableCopy];
         NSRange InitialRange=[TestString rangeOfString:PrefixRegex options: NSRegularExpressionSearch];//Fixing Prefix Time
@@ -61,6 +63,123 @@ static NSString* FixTimeStamp(NSString* Input){
     
     
 }
+
+NSString* CombineLRC(NSMutableDictionary* Input){
+    NSMutableArray* array1=[NSMutableArray array];
+    for (NSString* Key in Input.allKeys){
+        NSLog(@"Loading Key:%@",Key);
+        NSMutableArray* tmparray=[[[DLLRCParser alloc] init] parseLRC:[[Input objectForKey:Key] componentsJoinedByString:@"\n"]];
+            
+        [array1 addObjectsFromArray:tmparray];
+        [tmparray release];
+    }
+
+    if(array1.count<=0){
+        return nil;
+    }
+    NSArray* arraytmp=[array1 sortedArrayWithOptions:NSSortConcurrent usingComparator:^NSComparisonResult(id obj1,id obj2){
+     
+            if([[obj1 objectForKey:@"TIME"] floatValue] ==[[obj2 objectForKey:@"TIME"] floatValue]){
+                return NSOrderedSame;
+            }
+            if([[obj1 objectForKey:@"TIME"] floatValue] <[[obj2 objectForKey:@"TIME"] floatValue]){
+                return NSOrderedAscending;
+            }
+            else{
+                return NSOrderedDescending;
+            }
+        
+            
+        }];
+        
+        
+        array1=[NSMutableArray arrayWithArray:arraytmp];
+      //  NSLog(@"Sorted:%@",array1);
+
+        NSMutableString* finallrc=[NSMutableString string];
+        for(int i=0;i<array1.count;i++){
+         //  [finallrc appendString:@"\n"];
+             //             NSLog(@"%i",i);
+                 id nextObject;
+             id preObject;
+            id currobject;
+            if(i==0||i>=array1.count-1){
+                if(i==0){
+                    nextObject=[array1 objectAtIndex:i+1];
+                    preObject=[array1 objectAtIndex:i];
+                    currobject=[array1 objectAtIndex:i];
+                }
+                else{
+                    nextObject=[array1 objectAtIndex:i];
+                    preObject=[array1 objectAtIndex:i-1];
+                    currobject=[array1 objectAtIndex:i];
+                }
+            }
+            else{
+                
+                nextObject=[array1 objectAtIndex:i+1];
+                preObject=[array1 objectAtIndex:i-1];
+                currobject=[array1 objectAtIndex:i];
+                
+            }
+            
+            
+            
+            float nexttime=[[nextObject objectForKey:@"TIME"] floatValue];
+            float pretime=[[preObject objectForKey:@"TIME"] floatValue];
+            float currtime=[[currobject objectForKey:@"TIME"] floatValue];
+
+            float timediff1=nexttime-currtime;
+            float timediff2=currtime-pretime;
+            if(timediff2<=MAXTimeDifference&&i!=0&&i!=array1.count-1){
+                if([finallrc containsString:[currobject objectForKey:@"LRCTIME"]]){
+                    
+                }
+                else{
+                    NSString* tmpstr=[NSString stringWithFormat:@"%@%@  %@",[currobject objectForKey:@"LRCTIME"],[currobject objectForKey:@"LRC"],[preObject objectForKey:@"LRC"]];
+                    [array1 removeObject:preObject];
+                      [array1 removeObject:currobject];
+                    [finallrc appendString:tmpstr];
+                //   [finallrc appendString:@"\n"];
+                }
+                
+            }
+            if(timediff1<=MAXTimeDifference&&i!=0&&i!=array1.count-1){
+                if([finallrc containsString:[currobject objectForKey:@"LRCTIME"]]){
+                    
+                }
+                else{
+      NSString* tmpstr=[NSString stringWithFormat:@"%@%@%@",[currobject objectForKey:@"LRCTIME"],[currobject objectForKey:@"LRC"],[nextObject objectForKey:@"LRC"]];
+                    [array1 removeObject:nextObject];
+                    [array1 removeObject:currobject];
+                [finallrc appendString:tmpstr];
+             //  [finallrc appendString:@"\n"];
+                }
+                
+            }
+            else{
+           // NSMutableString* rstring=[NSMutableString string];
+                if([finallrc containsString:[currobject objectForKey:@"LRCTIME"]]){
+                    
+                }
+                else{
+                    NSString* tmpstr=[NSString stringWithFormat:@"%@%@",[currobject objectForKey:@"LRCTIME"],[currobject objectForKey:@"LRC"]];
+                    [array1 removeObject:currobject];
+         [finallrc appendString:tmpstr];
+          //  [finallrc appendString:@"\n"];
+                }
+            
+        }
+        }
+    finallrc=(NSMutableString*)[finallrc stringByReplacingOccurrencesOfString:@"\n" withString:@""];
+    // NSLog(@"%@",finallrc);
+    finallrc=(NSMutableString*)[finallrc stringByReplacingOccurrencesOfString:@"[" withString:@"\n["];
+    // NSArray* components=[finallrc componentsSeparatedByString:@"\n"];
+    // NSLog(@"%@",components);
+    //[[finallrc dataUsingEncoding:NSUTF8StringEncoding] writeToFile:OUTPATH atomically:YES];
+    return finallrc;
+}
+
 static NSString* Serialize(NSArray* Input){
     if(Input.count <=0 || Input==nil){
         return nil;
@@ -114,10 +233,20 @@ static NSString* Serialize(NSArray* Input){
              Name=[Name stringByReplacingOccurrencesOfString:@"/" withString:@"_"];
              Singer=[Singer stringByReplacingOccurrencesOfString:@"/" withString:@"_"];
              Album=[Album stringByReplacingOccurrencesOfString:@"/" withString:@"_"];
-            [LRCDict setObject:ID3LRC forKey:@"ID3"];
+            if(ID3LRC!=nil){
+                [LRCDict setObject:ID3LRC forKey:@"ID3"];
+            }
+            if(TranslateLRC!=nil){
+                [LRCDict setObject:TranslateLRC forKey:@"Translate"];
+            }
+            if(TransliterateLRC!=nil){
+                [LRCDict setObject:TransliterateLRC forKey:@"Transliterate"];
+            }
+
             [Serialize(ID3LRC) writeToFile:[NSString stringWithFormat:@"%@/Documents/Lyrics/%@-%@-%@ID3.txt",NSHomeDirectory(),Name,Singer,Album] atomically:YES  encoding:NSUTF8StringEncoding error:nil];
             [Serialize(TranslateLRC) writeToFile:[NSString stringWithFormat:@"%@/Documents/Lyrics/%@-%@-%@翻译.txt",NSHomeDirectory(),Name,Singer,Album] atomically:YES  encoding:NSUTF8StringEncoding error:nil];
             [Serialize(TransliterateLRC) writeToFile:[NSString stringWithFormat:@"%@/Documents/Lyrics/%@-%@-%@音译.txt",NSHomeDirectory(),Name,Singer,Album] atomically:YES  encoding:NSUTF8StringEncoding error:nil];      
+            [CombineLRC(LRCDict) writeToFile:[NSString stringWithFormat:@"%@/Documents/Lyrics/%@-%@-%@合并.txt",NSHomeDirectory(),Name,Singer,Album] atomically:YES  encoding:NSUTF8StringEncoding error:nil];
         }
    }    
 }

@@ -1,9 +1,9 @@
 Package: naville.qqmusiclrcexporter
 Name: QQMusicLRCExporter
 Depends: mobilesubstrate
-Version: 0.0.1
+Version: 0.1.0
 Architecture: iphoneos-arm
-Description: An awesome MobileSubstrate tweak!
+Description: QQMusicLRCRuntimeExport
 Maintainer: Naville
 Author: Naville
 Section: Tweaks

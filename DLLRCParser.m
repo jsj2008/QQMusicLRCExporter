@@ -2,8 +2,8 @@
 //  DLLRCParser.m
 //  LrcParser
 //
-//  Created by Naville.Zhang,Based On Lee's Original DLLRCParser
-//  Copyright (c) 2015 Naville.Zhang. All rights reserved.
+//  Created by lee on 13-10-14.
+//  Copyright (c) 2013年 Lee. All rights reserved.
 //
 
 #import "DLLRCParser.h"
@@ -200,122 +200,5 @@
         }
     }
 }
--(NSString*)Combiner:(NSMutableArray*)array1{
-        NSDictionary* nulldict=[NSDictionary dictionaryWithObjectsAndKeys:@"0",@"LRCTIME",@"",@"LRC",@"0",@"TIME",nil];
-    NSArray* arraytmp=[array1 sortedArrayWithOptions:NSSortConcurrent usingComparator:^NSComparisonResult(id obj1,id obj2){
-        
-        if([[obj1 objectForKey:@"TIME"] floatValue] ==[[obj2 objectForKey:@"TIME"] floatValue]){
-            return NSOrderedSame;
-        }
-        if([[obj1 objectForKey:@"TIME"] floatValue] <[[obj2 objectForKey:@"TIME"] floatValue]){
-            return NSOrderedAscending;
-        }
-        else{
-            return NSOrderedDescending;
-        }
-        
-        
-    }];
-    
-    
-    array1=[NSMutableArray arrayWithArray:arraytmp];
-    // NSLog(@"Sorted:%@",array1);
-    //   [array1 writeToFile:@"/Users/Naville/Desktop/Sorted.txt" atomically:YES];
-    
-    NSMutableString* finallrc=[NSMutableString string];
-    for(int i=0;i<array1.count;i++){
-        //  [finallrc appendString:@"\n"];
-        //             NSLog(@"%i",i);
-        id nextObject;
-        id preObject;
-        id currobject;
-        if(i==0||i>=array1.count-1){
-            if(i==0){
-                nextObject=[array1 objectAtIndex:i+1];
-                preObject=[array1 objectAtIndex:i];
-                currobject=[array1 objectAtIndex:i];
-            }
-            else{
-                nextObject=[array1 objectAtIndex:i];
-                preObject=[array1 objectAtIndex:i-1];
-                currobject=[array1 objectAtIndex:i];
-            }
-        }
-        else{
-            
-            nextObject=[array1 objectAtIndex:i+1];
-            preObject=[array1 objectAtIndex:i-1];
-            currobject=[array1 objectAtIndex:i];
-            
-        }
-        
-        //      NSLog(@"%@:%@",[currobject objectForKey:@"LRCTIME"],[currobject objectForKey:@"LRC"]);
-        
-        float nexttime=[[nextObject objectForKey:@"TIME"] floatValue];
-        float pretime=[[preObject objectForKey:@"TIME"] floatValue];
-        float currtime=[[currobject objectForKey:@"TIME"] floatValue];
-        
-        float timediff1=nexttime-currtime;
-        float timediff2=currtime-pretime;
-        if(timediff2<=0.000005&&i!=0&&i!=array1.count-1){
-            if([finallrc containsString:[currobject objectForKey:@"LRCTIME"]]){
-                
-            }
-            else{
-                NSString* tmpstr=[NSString stringWithFormat:@"%@%@%@",[currobject objectForKey:@"LRCTIME"],[currobject objectForKey:@"LRC"],[preObject objectForKey:@"LRC"]];
-                ///   [array1 removeObject:preObject];
-                //    [array1 removeObject:currobject];
-                [array1 setObject:nulldict atIndexedSubscript:i-1];
-                [array1 setObject:nulldict atIndexedSubscript:i];
-                [finallrc appendString:tmpstr];
-                //   [finallrc appendString:@"\n"];
-            }
-            
-        }
-        if(timediff1<=0.000005&&i!=0&&i!=array1.count-1){
-            if([finallrc containsString:[currobject objectForKey:@"LRCTIME"]]){
-                
-            }
-            else{
-                NSString* tmpstr=[NSString stringWithFormat:@"%@%@%@",[currobject objectForKey:@"LRCTIME"],[currobject objectForKey:@"LRC"],[nextObject objectForKey:@"LRC"]];
-                [array1 setObject:nulldict atIndexedSubscript:i+1];
-                [array1 setObject:nulldict atIndexedSubscript:i];
-                
-                
-                //  [array1 removeObject:nextObject];
-                //  [array1 removeObject:currobject];
-                [finallrc appendString:tmpstr];
-                //  [finallrc appendString:@"\n"];
-            }
-            
-        }
-        else{
-            // NSMutableString* rstring=[NSMutableString string];
-            if([finallrc containsString:[currobject objectForKey:@"LRCTIME"]]){
-                
-            }
-            else{
-                NSString* tmpstr=[NSString stringWithFormat:@"%@%@",[currobject objectForKey:@"LRCTIME"],[currobject objectForKey:@"LRC"]];
-                //       [array1 removeObject:currobject];
-                [array1 setObject:nulldict atIndexedSubscript:i];
-                [finallrc appendString:tmpstr];
-                //  [finallrc appendString:@"\n"];
-            }
-            
-        }
-    }
-
-    finallrc=[NSMutableString stringWithString:[finallrc stringByReplacingOccurrencesOfString:@"\n" withString:@""]];
-    // NSLog(@"%@",finallrc);
-
-
-    finallrc=[NSMutableString stringWithString:[finallrc stringByReplacingOccurrencesOfString:@"[" withString:@"\n["]];
-    
-    return finallrc;
-}
-
-
-
-
 
 @end
