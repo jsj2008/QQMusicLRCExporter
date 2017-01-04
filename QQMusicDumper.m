@@ -6,22 +6,25 @@
 //
 //
 
-#import "QQLyricParse.h"
-#import "QQLineLyric.h"
+#import "Headers/QQLyricParse.h"
+//#import "Headers/QQLineLyric.h"
 #import "QQMusicDumper.h"
-#import "LyricManager.h"
+#import "Headers/LyricManager.h"
 #import "IO.h"
 #import "SQLHelper.h"
-#import "SongInfo.h"
-#import "SongInfoManager.h"
+#import "Headers/SongInfo.h"
+#import "Headers/SongInfoManager.h"
 #import "UIKit/UIKit.h"
-#import "QQLineLyricQRC.h"
+#import "Headers/QQLineLyricQRC.h"
 #import "DLLRCParser.h"
 #import  <objc/runtime.h>
+#import <sqlite3.h>
+
 Class LMcls=NULL;
 LyricManager* LM=nil;
 Class SongInfoManagercls=NULL;
 SongInfoManager* SIManager=nil;
+Class QQLyricParsecls=nil;
 #define PrefixRegex @"\\[\\d{1,},\\d{1,}\\]"
 #define OtherRegex @"\\(\\d{1,},\\d{1,}\\)"
 
@@ -29,7 +32,7 @@ SongInfoManager* SIManager=nil;
 
 static NSString* FixTimeStamp(NSString* Input){
     @autoreleasepool {
-        
+
         NSMutableString* TestString=[Input mutableCopy];
         NSRange InitialRange=[TestString rangeOfString:PrefixRegex options: NSRegularExpressionSearch];//Fixing Prefix Time
         while(InitialRange.location!= NSNotFound){
@@ -42,34 +45,33 @@ static NSString* FixTimeStamp(NSString* Input){
             double sec=seconds-60*min;
             NSString* ReplacedString=[NSString stringWithFormat:@"[%02d:%05.2lf]",min,sec];
             [TestString replaceCharactersInRange:InitialRange withString:ReplacedString];
-            
-            
+
+
             InitialRange=[TestString rangeOfString:PrefixRegex options: NSRegularExpressionSearch];
-            
+
         }
         InitialRange=[TestString rangeOfString:OtherRegex options: NSRegularExpressionSearch];//Fixing Other Time
         while(InitialRange.location!= NSNotFound){
             [TestString replaceCharactersInRange:InitialRange withString:@""];
-            
-            
+
+
             InitialRange=[TestString rangeOfString:OtherRegex options: NSRegularExpressionSearch];
-            
+
         }
         //NSLog(@"%@",TestString);
         return TestString;
-        
+
     }
-    
-    
-    
+
+
+
 }
 
 NSString* CombineLRC(NSMutableDictionary* Input){
     NSMutableArray* array1=[NSMutableArray array];
     for (NSString* Key in Input.allKeys){
-        NSLog(@"Loading Key:%@",Key);
         NSMutableArray* tmparray=[[[DLLRCParser alloc] init] parseLRC:[[Input objectForKey:Key] componentsJoinedByString:@"\n"]];
-            
+
         [array1 addObjectsFromArray:tmparray];
         [tmparray release];
     }
@@ -78,7 +80,7 @@ NSString* CombineLRC(NSMutableDictionary* Input){
         return nil;
     }
     NSArray* arraytmp=[array1 sortedArrayWithOptions:NSSortConcurrent usingComparator:^NSComparisonResult(id obj1,id obj2){
-     
+
             if([[obj1 objectForKey:@"TIME"] floatValue] ==[[obj2 objectForKey:@"TIME"] floatValue]){
                 return NSOrderedSame;
             }
@@ -88,11 +90,11 @@ NSString* CombineLRC(NSMutableDictionary* Input){
             else{
                 return NSOrderedDescending;
             }
-        
-            
+
+
         }];
-        
-        
+
+
         array1=[NSMutableArray arrayWithArray:arraytmp];
       //  NSLog(@"Sorted:%@",array1);
 
@@ -116,15 +118,15 @@ NSString* CombineLRC(NSMutableDictionary* Input){
                 }
             }
             else{
-                
+
                 nextObject=[array1 objectAtIndex:i+1];
                 preObject=[array1 objectAtIndex:i-1];
                 currobject=[array1 objectAtIndex:i];
-                
+
             }
-            
-            
-            
+
+
+
             float nexttime=[[nextObject objectForKey:@"TIME"] floatValue];
             float pretime=[[preObject objectForKey:@"TIME"] floatValue];
             float currtime=[[currobject objectForKey:@"TIME"] floatValue];
@@ -133,7 +135,7 @@ NSString* CombineLRC(NSMutableDictionary* Input){
             float timediff2=currtime-pretime;
             if(timediff2<=MAXTimeDifference&&i!=0&&i!=array1.count-1){
                 if([finallrc containsString:[currobject objectForKey:@"LRCTIME"]]){
-                    
+
                 }
                 else{
                     NSString* tmpstr=[NSString stringWithFormat:@"%@%@  %@",[currobject objectForKey:@"LRCTIME"],[currobject objectForKey:@"LRC"],[preObject objectForKey:@"LRC"]];
@@ -142,11 +144,11 @@ NSString* CombineLRC(NSMutableDictionary* Input){
                     [finallrc appendString:tmpstr];
                 //   [finallrc appendString:@"\n"];
                 }
-                
+
             }
             if(timediff1<=MAXTimeDifference&&i!=0&&i!=array1.count-1){
                 if([finallrc containsString:[currobject objectForKey:@"LRCTIME"]]){
-                    
+
                 }
                 else{
       NSString* tmpstr=[NSString stringWithFormat:@"%@%@%@",[currobject objectForKey:@"LRCTIME"],[currobject objectForKey:@"LRC"],[nextObject objectForKey:@"LRC"]];
@@ -155,12 +157,12 @@ NSString* CombineLRC(NSMutableDictionary* Input){
                 [finallrc appendString:tmpstr];
              //  [finallrc appendString:@"\n"];
                 }
-                
+
             }
             else{
            // NSMutableString* rstring=[NSMutableString string];
                 if([finallrc containsString:[currobject objectForKey:@"LRCTIME"]]){
-                    
+
                 }
                 else{
                     NSString* tmpstr=[NSString stringWithFormat:@"%@%@",[currobject objectForKey:@"LRCTIME"],[currobject objectForKey:@"LRC"]];
@@ -168,7 +170,7 @@ NSString* CombineLRC(NSMutableDictionary* Input){
          [finallrc appendString:tmpstr];
           //  [finallrc appendString:@"\n"];
                 }
-            
+
         }
         }
     finallrc=(NSMutableString*)[finallrc stringByReplacingOccurrencesOfString:@"\n" withString:@""];
@@ -197,6 +199,7 @@ static NSString* Serialize(NSArray* Input){
     LM=[LMcls sharedLyricManager];
     SongInfoManagercls=objc_getClass("SongInfoManager");
     SIManager=[SongInfoManagercls sharedSongInfoManager];
+    QQLyricParsecls=objc_getClass("QQLyricParse");
     NSLog(@"Init LM:%@\nSIManager:%@",LM,SIManager);
     //Should Dump
     NSMutableDictionary *preferences = [[NSMutableDictionary alloc] initWithContentsOfFile:@"/var/mobile/Library/Preferences/naville.qqlrcexport.plist"];
@@ -243,21 +246,42 @@ static NSString* Serialize(NSArray* Input){
                 [LRCDict setObject:TransliterateLRC forKey:@"Transliterate"];
             }
 
-            [Serialize(ID3LRC) writeToFile:[NSString stringWithFormat:@"%@/Documents/Lyrics/%@-%@-%@ID3.txt",NSHomeDirectory(),Name,Singer,Album] atomically:YES  encoding:NSUTF8StringEncoding error:nil];
+            /*[Serialize(ID3LRC) writeToFile:[NSString stringWithFormat:@"%@/Documents/Lyrics/%@-%@-%@ID3.txt",NSHomeDirectory(),Name,Singer,Album] atomically:YES  encoding:NSUTF8StringEncoding error:nil];
             [Serialize(TranslateLRC) writeToFile:[NSString stringWithFormat:@"%@/Documents/Lyrics/%@-%@-%@翻译.txt",NSHomeDirectory(),Name,Singer,Album] atomically:YES  encoding:NSUTF8StringEncoding error:nil];
-            [Serialize(TransliterateLRC) writeToFile:[NSString stringWithFormat:@"%@/Documents/Lyrics/%@-%@-%@音译.txt",NSHomeDirectory(),Name,Singer,Album] atomically:YES  encoding:NSUTF8StringEncoding error:nil];      
-            [CombineLRC(LRCDict) writeToFile:[NSString stringWithFormat:@"%@/Documents/Lyrics/%@-%@-%@合并.txt",NSHomeDirectory(),Name,Singer,Album] atomically:YES  encoding:NSUTF8StringEncoding error:nil];
+            [Serialize(TransliterateLRC) writeToFile:[NSString stringWithFormat:@"%@/Documents/Lyrics/%@-%@-%@音译.txt",NSHomeDirectory(),Name,Singer,Album] atomically:YES  encoding:NSUTF8StringEncoding error:nil];
+            [CombineLRC(LRCDict) writeToFile:[NSString stringWithFormat:@"%@/Documents/Lyrics/%@-%@-%@合并.txt",NSHomeDirectory(),Name,Singer,Album] atomically:YES  encoding:NSUTF8StringEncoding error:nil];*/
+            NSMutableDictionary* result=[NSMutableDictionary dictionary];
+            BOOL isEmpty=YES;
+            if(Serialize(ID3LRC)!=nil){
+              [result setObject:Serialize(ID3LRC) forKey:@"ID3"];
+              isEmpty=false;
+            }
+            if(Serialize(TranslateLRC)!=nil){
+              [result setObject:Serialize(TranslateLRC) forKey:@"Translate"];
+              isEmpty=false;
+            }
+            if(Serialize(TransliterateLRC)!=nil){
+              [result setObject:Serialize(TransliterateLRC) forKey:@"Transliterate"];
+              isEmpty=false;
+            }
+            [result setObject:Name forKey:@"Name"];
+            [result setObject:Singer forKey:@"Singer"];
+            [result setObject:Album forKey:@"Album"];
+            if(!isEmpty){
+              [result writeToFile:[NSString stringWithFormat:@"%@/Documents/Lyrics/%@-%@-%@.txt",NSHomeDirectory(),Name,Singer,Album] atomically:YES];
+            }
+            //Name,Singer,Album
         }
-   }    
+   }
 }
 +(NSString*)ConvertLRCTime:(long long)microsecond{
     //NSLog(@"ConvertLRCTime:%lli",microsecond);
     double seconds=microsecond/1000.0;
     int min=seconds/60;
     double sec=seconds-60*min;
-    
+
     return [NSString stringWithFormat:@"[%02d:%05.2lf]",min,sec];
-    
+
 }
 
 +(void)DumpTranslateWithSongInfo:(SongInfo*)SI withLyricsArray:(NSMutableArray**)LyricsArray{
@@ -266,18 +290,19 @@ static NSString* Serialize(NSArray* Input){
         NSString* translatelyrics=[LMcls decodeQrcFileWithPath:TranslatePath];
         if(TranslatePath==nil||translatelyrics==nil){
             return;
-        } 
-       // NSLog(@"TranslatePath:%@",TranslatePath);  
-        id LyricManager=[LMcls sharedLyricManager];
-       // NSLog(@"TranslateLyrics:%@",translatelyrics);
-        QQLyricParse* rawlyrics=[LyricManager parseText:translatelyrics];          
+        }
+       //NSLog(@"TranslatePath:%@",TranslatePath);
+        //id LyricManager=[LMcls sharedLyricManager];
+      // NSLog(@"TranslateLyrics:%@",translatelyrics);
+        QQLyricParse* rawlyrics=[[QQLyricParsecls alloc] init];
+        [rawlyrics parse:translatelyrics];
         NSArray* lyricist=rawlyrics.mLineLyricList;
         for(int i=0;i<[lyricist count];i++){
             QQLineLyricQRC* qll=[lyricist objectAtIndex:i];
-            NSString* timestring=[self ConvertLRCTime:qll.time];   
+            NSString* timestring=[self ConvertLRCTime:qll.time];
             [*LyricsArray addObject:[NSString stringWithFormat:@"%@%@\n",timestring,qll.text]];
         }
-        //NSLog(@"Translate Lyrics:%@",LyricsArray);
+       //NSLog(@"Translate Lyrics:%@",LyricsArray);
 
     }//End AutoRelease Pool
 }
@@ -287,12 +312,14 @@ static NSString* Serialize(NSArray* Input){
         NSString* translatelyrics=[LMcls decodeQrcFileWithPath:TranslatePath];
         if(TranslatePath==nil||translatelyrics==nil){
             return;
-        } 
-       // NSLog(@"TranslatePath:%@",TranslatePath); 
-        id LyricManager=[LMcls sharedLyricManager];
+        }
+       // NSLog(@"TranslatePath:%@",TranslatePath);
+        //id LyricManager=[LMcls sharedLyricManager];
         translatelyrics=[LMcls getQrcTextFromXml:translatelyrics];
-        translatelyrics=FixTimeStamp(translatelyrics);  
-        QQLyricParse* rawlyrics=[LyricManager parseText:translatelyrics];          
+        translatelyrics=FixTimeStamp(translatelyrics);
+        //QQLyricParse* rawlyrics=[LyricManager parseText:translatelyrics];
+        QQLyricParse* rawlyrics=[[QQLyricParsecls alloc] init];
+        [rawlyrics parse:translatelyrics];
         NSArray* lyricist=rawlyrics.mLineLyricList;
         for(int i=0;i<[lyricist count];i++){
             QQLineLyricQRC* qll=[lyricist objectAtIndex:i];
@@ -313,18 +340,20 @@ static NSString* Serialize(NSArray* Input){
         NSString* translatelyrics=[LMcls decodeQrcFileWithPath:TranslatePath];
         if(TranslatePath==nil||translatelyrics==nil){
             return;
-        } 
-       // NSLog(@"TranslatePath:%@",TranslatePath); 
-        translatelyrics=[LMcls getQrcTextFromXml:translatelyrics]; 
+        }
+       // NSLog(@"TranslatePath:%@",TranslatePath);
+        translatelyrics=[LMcls getQrcTextFromXml:translatelyrics];
         translatelyrics=FixTimeStamp(translatelyrics);
-        //NSLog(@"ID3Lyrics:%@",translatelyrics); 
+        //NSLog(@"ID3Lyrics:%@",translatelyrics);
 
-        id LyricManager=[LMcls sharedLyricManager];
-        QQLyricParse* rawlyrics=[LyricManager parseText:translatelyrics];          
+      //  id LyricManager=[LMcls sharedLyricManager];
+        //QQLyricParse* rawlyrics=[LyricManager parseText:translatelyrics];
+        QQLyricParse* rawlyrics=[[QQLyricParsecls alloc] init];
+        [rawlyrics parse:translatelyrics];
         NSArray* lyricist=rawlyrics.mLineLyricList;
         for(int i=0;i<[lyricist count];i++){
             QQLineLyricQRC* qll=[lyricist objectAtIndex:i];
-            NSString* timestring=[self ConvertLRCTime:qll.time]; 
+            NSString* timestring=[self ConvertLRCTime:qll.time];
             [*LyricsArray addObject:[NSString stringWithFormat:@"%@%@\n",timestring,qll.text]];
         }
         //NSLog(@"ID3 Lyrics:%@",LyricsArray);

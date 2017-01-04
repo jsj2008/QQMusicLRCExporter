@@ -1,10 +1,6 @@
 #import "QQMusicDumper.h"
 %group Hooks
 %hook SongInfo
-- (BOOL)playable:(BOOL)arg1 checkQPlay:(BOOL)arg2 checkCopyright:(BOOL)arg3{
-	NSLog(@"SongInfo----playable:checkQPlay:checkCopyright:");
-	return YES;
-}
 - (BOOL)isCreateRadioEnable{
 	return YES;
 }
@@ -27,22 +23,7 @@
 	return YES;
 }
 %end
-/*
-%hook LyricManager
-+ (id)getYInyiLyricFilePath:(id)arg1{
-	id ret=%orig;
-	NSLog(@"[LyricManager getYInyiLyricFilePath:%@]\n%@",arg1,ret);
 
-	return ret;
-}
-+ (id)getTranslateLyricFilePath:(id)arg1{
-	id ret=%orig;
-	NSLog(@"[LyricManager getTranslateLyricFilePath:%@]\n%@",arg1,ret);
-
-	return ret;
-}
-%end
-*/
 %end
 
 %ctor{

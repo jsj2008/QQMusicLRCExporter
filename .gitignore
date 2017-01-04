@@ -4,3 +4,5 @@ obj/
 *.o
 .theos/
 QQMusicPad
+qqmusic.sqlite
+QQMusic.decrypted
